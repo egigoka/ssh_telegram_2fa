@@ -95,6 +95,13 @@ def check_auth(pamh):
     return False
 
 
+def log(message):
+    path = "/tmp/pam_debug"
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    with open(path, "ab") as file:
+        file.write(f"{current_time} {message}\n".encode("utf-8"))
+
+
 def pam_sm_authenticate(pamh, flags, argv):
     local_network = '192.168.1.'
     if local_network in pamh.rhost:
@@ -124,7 +131,7 @@ def pam_sm_close_session(pamh, flags, argv):
 def pam_sm_chauthtok(pamh, flags, argv):
     return pamh.PAM_SUCCESS
 
-
+log("telegram2fa.py loaded")
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
@@ -136,6 +143,14 @@ CONNECTION_INFO = os.environ.get('SSH_CONNECTION')
 CONNECTION_INFO += (f", host: {os.environ.get('PAM_RHOST')}, user: {os.environ.get('PAM_RUSER')}"
                     f", service: {os.environ.get('PAM_SERVICE')}, tty: {os.environ.get('PAM_TTY')}"
                     f", user: {os.environ.get('PAM_USER')}, type: {os.environ.get('PAM_TYPE')}")
+
+log(f"{CONNECTION_INFO=}")
+log(f"{TELEGRAM_TOKEN=}")
+log(f"{CHAT_ID=}")
+log(f"{URGENT_KEY=}")
+log(f"{INCORRECT_ATTEMPTS=}")
+log(f"{os.getcwd()=}")
+
 
 # usage:
 # # apt-get install libpam-python

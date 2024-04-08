@@ -142,7 +142,9 @@ def check_auth(pamh):
         print_with_message("Access Denied.")
         return False
     except Exception as e:
-        print_with_message(f"Error: {e} {e}")
+        message = f"Error: {e}"
+        log(message)
+        print_with_message(message)
 
         return False
 

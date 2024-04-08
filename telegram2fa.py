@@ -113,7 +113,7 @@ def check_auth(pamh):
             can_attempt_interactive()
             # msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
             log("before conversation")
-            msg = pamh.Message(pamh.PAM_PROMPT_ECHO_ON, 'Enter OTP: ')
+            msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
             log("after conversation")
             rsp = pamh.conversation(msg)
             log(f"{rsp=}")

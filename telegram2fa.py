@@ -137,6 +137,7 @@ def pam_sm_chauthtok(pamh, flags, argv):
     log(f"pam_sm_chauthtok")
     return pamh.PAM_SUCCESS
 
+
 log("telegram2fa.py loaded")
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -148,10 +149,16 @@ except TypeError:
     INCORRECT_ATTEMPTS = 1
 BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
 
-CONNECTION_INFO = os.environ.get('SSH_CONNECTION')
-CONNECTION_INFO += (f", host: {os.environ.get('PAM_RHOST')}, user: {os.environ.get('PAM_RUSER')}"
-                    f", service: {os.environ.get('PAM_SERVICE')}, tty: {os.environ.get('PAM_TTY')}"
-                    f", user: {os.environ.get('PAM_USER')}, type: {os.environ.get('PAM_TYPE')}")
+# environment variables DEBUG
+ENVIRONMENT_VARIABLES = ""
+for key, value in os.environ.items():
+    ENVIRONMENT_VARIABLES += f"{key}={value}\n"
+log(f"{ENVIRONMENT_VARIABLES}")
+# DEBUG END
+
+CONNECTION_INFO = (f"host: {os.environ.get('PAM_RHOST')}, user: {os.environ.get('PAM_RUSER')}"
+                   f", service: {os.environ.get('PAM_SERVICE')}, tty: {os.environ.get('PAM_TTY')}"
+                   f", user: {os.environ.get('PAM_USER')}, type: {os.environ.get('PAM_TYPE')}")
 
 log(f"{CONNECTION_INFO=}")
 log(f"{TELEGRAM_TOKEN=}")
@@ -159,7 +166,6 @@ log(f"{CHAT_ID=}")
 log(f"{URGENT_KEY=}")
 log(f"{INCORRECT_ATTEMPTS=}")
 log(f"{os.getcwd()=}")
-
 
 # usage:
 # # apt-get install libpam-python

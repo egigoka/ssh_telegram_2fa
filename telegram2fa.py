@@ -217,13 +217,13 @@ CONNECTION_INFO = (f"host: {os.environ.get('PAM_RHOST')}, user: {os.environ.get(
                    f", service: {os.environ.get('PAM_SERVICE')}, tty: {os.environ.get('PAM_TTY')}"
                    f", user: {os.environ.get('PAM_USER')}, type: {os.environ.get('PAM_TYPE')}")
 
-if "PAM_DEBUG" in os.environ:
-    log(f"{CONNECTION_INFO=}")
-    log(f"{TELEGRAM_TOKEN=}")
-    log(f"{CHAT_ID=}")
-    log(f"{URGENT_KEY=}")
-    log(f"{INCORRECT_ATTEMPTS=}")
-    log(f"{os.getcwd()=}")
+# if "PAM_DEBUG" in os.environ:
+#     log(f"{CONNECTION_INFO=}")
+#     log(f"{TELEGRAM_TOKEN=}")
+#     log(f"{CHAT_ID=}")
+#     log(f"{URGENT_KEY=}")
+#     log(f"{INCORRECT_ATTEMPTS=}")
+#     log(f"{os.getcwd()=}")
 
 # usage:
 # # apt-get install libpam-python

@@ -141,7 +141,7 @@ def check_auth(pamh):
         # unreachable code, for situation when code above changes
         print_with_message("Access Denied.")
         return False
-    except Exception as e:
+    except BaseException as e:
         message = f"Error: {e}"
         log(message)
         print_with_message(message)

@@ -114,12 +114,11 @@ def check_auth(pamh):
 
         for _ in range(INCORRECT_ATTEMPTS):
             can_attempt_interactive()
-            # msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
             log("before conversation")
             msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
             log("after creating message")
             rsp = pamh.conversation(msg)
-            log(f"after conversation {rsp=}")
+            log(f"after conversation {rsp.resp}")
             input_otp = rsp.resp
             if cached_otp.check_otp(input_otp):
                 print_with_message("Login Successful!")

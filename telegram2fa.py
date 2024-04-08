@@ -103,6 +103,7 @@ def log(message):
 
 
 def pam_sm_authenticate(pamh, flags, argv):
+    log(f"pam_sm_authenticate")
     local_network = '192.168.1.'
     if local_network in pamh.rhost:
         return pamh.PAM_SUCCESS
@@ -113,22 +114,27 @@ def pam_sm_authenticate(pamh, flags, argv):
 
 
 def pam_sm_setcred(pamh, flags, argv):
+    log(f"pam_sm_setcred")
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_acct_mgmt(pamh, flags, argv):
+    log(f"pam_sm_acct_mgmt")
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_open_session(pamh, flags, argv):
+    log(f"pam_sm_open_session")
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_close_session(pamh, flags, argv):
+    log(f"pam_sm_close_session")
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_chauthtok(pamh, flags, argv):
+    log(f"pam_sm_chauthtok")
     return pamh.PAM_SUCCESS
 
 log("telegram2fa.py loaded")
@@ -136,7 +142,10 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 URGENT_KEY = os.getenv('URGENT_KEY')
-INCORRECT_ATTEMPTS = int(os.getenv('INCORRECT_ATTEMPTS'))
+try:
+    INCORRECT_ATTEMPTS = int(os.getenv('INCORRECT_ATTEMPTS'))
+except ValueError:
+    INCORRECT_ATTEMPTS = 1
 BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
 
 CONNECTION_INFO = os.environ.get('SSH_CONNECTION')

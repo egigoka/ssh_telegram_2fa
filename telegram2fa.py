@@ -75,17 +75,20 @@ def check_auth(pamh):
         can_attempt_interactive()
         msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
         rsp = pamh.conversation(msg)
-        if msg == rsp.resp:
+        input_otp = rsp.resp
+        if input_otp == otp:
             print_with_message("Login Successful!")
             return True
         else:
-            print_with_message("Incorrect OTP. Try again.")
+            print_with_message(f"Incorrect OTP {input_otp}. Try again.")
     else:
         can_attempt_interactive()
         print_with_message(f"{INCORRECT_ATTEMPTS} incorrect OTP attempts. Try the urgent key.")
-        urgent_input = input("Enter Urgent Key: ")
-        if urgent_input == URGENT_KEY:
-            print_with_message("Urgent login successful.")
+        msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
+        rsp = pamh.conversation(msg)
+        urgent_key_input = rsp.resp
+        if urgent_key_input == URGENT_KEY:
+            print_with_message(f"Urgent login successful with message {urgent_key_input}.")
             return True
         else:
             print_with_message("Incorrect Urgent Key. Access Denied.")
@@ -177,6 +180,12 @@ log(f"{os.getcwd()=}")
 # auth requisite /lib/security/pam_python.so /path/to/telegram2fa.py
 # # Standard Un*x authentication.
 # @include common-auth
+#
+# cat /.env
+# TELEGRAM_TOKEN="your_token_here"
+# CHAT_ID=your_chat_id_here
+# URGENT_KEY="your_urgent_key_here"
+# INCORRECT_ATTEMPTS=3
 #
 # # systemctl restart sshd
 # inspiration: http://hacktracking.blogspot.com/2015/12/ssh-two-factor-authentication-pam.html

@@ -13,6 +13,41 @@ except ModuleNotFoundError:
     exit(1)
 
 
+class CachedOTP:
+    def __init__(self):
+        self.otp = None
+        self.previous_otp = None
+
+    def set_otp(self, otp):
+        self.previous_otp = str(self.otp)
+        self.otp = str(otp)
+
+    def check_otp(self, otp):
+        # due to https://sourceforge.net/p/pam-python/tickets/6/
+        return otp == self.otp or otp == self.previous_otp
+
+    def save_otp(self):
+        with open("/tmp/otp", "wb") as file:
+            string = f"{self.otp}\n{self.previous_otp}"
+            file.write(self.otp.encode("utf-8"))
+
+    def load_otp(self):
+        try:
+            with open("/tmp/otp", "rb") as file:
+                otp = file.read().decode("utf-8").split("\n")
+                self.otp = otp[0]
+                self.previous_otp = otp[1]
+        except FileNotFoundError:
+            self.otp = None
+            self.previous_otp = None
+            self.save_otp()
+        except Exception as e:
+            print(f"Error: {e}")
+            log(f"Error: {e}")
+            self.otp = None
+            self.previous_otp = None
+
+
 class TokenBucket:
     def __init__(self, capacity, fill_rate):
         self.capacity = capacity
@@ -66,8 +101,10 @@ def print_with_message(message):
 
 def check_auth(pamh):
     try:
-        otp = get_otp()
-        if send_telegram_message(f"Your OTP is: {otp}"):
+        cached_otp = CachedOTP()
+        cached_otp.load_otp()
+        cached_otp.set_otp(get_otp())
+        if send_telegram_message(f"Your OTP is: {cached_otp.otp}"):
             print("OTP sent to your Telegram chat.")
         else:
             print("Failed to send OTP.")
@@ -81,7 +118,7 @@ def check_auth(pamh):
             rsp = pamh.conversation(msg)
             log(f"{rsp=}")
             input_otp = rsp.resp
-            if input_otp == otp:
+            if cached_otp.check_otp(input_otp):
                 print_with_message("Login Successful!")
                 return True
             else:
@@ -102,7 +139,8 @@ def check_auth(pamh):
         print_with_message("Access Denied.")
         return False
     except Exception as e:
-        print_with_message(f"Error: {e}")
+        print_with_message(f"Error: {e} {e}")
+
         return False
 
 

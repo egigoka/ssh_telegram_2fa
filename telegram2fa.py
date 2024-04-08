@@ -65,41 +65,45 @@ def print_with_message(message):
 
 
 def check_auth(pamh):
-    otp = get_otp()
-    if send_telegram_message(f"Your OTP is: {otp}"):
-        print("OTP sent to your Telegram chat.")
-    else:
-        print("Failed to send OTP.")
+    try:
+        otp = get_otp()
+        if send_telegram_message(f"Your OTP is: {otp}"):
+            print("OTP sent to your Telegram chat.")
+        else:
+            print("Failed to send OTP.")
 
-    for _ in range(INCORRECT_ATTEMPTS):
-        can_attempt_interactive()
-        # msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
-        log("before conversation")
-        msg = pamh.Message(pamh.PAM_PROMPT_ECHO_ON, 'Enter OTP: ')
-        log("after conversation")
-        rsp = pamh.conversation(msg)
-        log(f"{rsp=}")
-        input_otp = rsp.resp
-        if input_otp == otp:
-            print_with_message("Login Successful!")
-            return True
+        for _ in range(INCORRECT_ATTEMPTS):
+            can_attempt_interactive()
+            # msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
+            log("before conversation")
+            msg = pamh.Message(pamh.PAM_PROMPT_ECHO_ON, 'Enter OTP: ')
+            log("after conversation")
+            rsp = pamh.conversation(msg)
+            log(f"{rsp=}")
+            input_otp = rsp.resp
+            if input_otp == otp:
+                print_with_message("Login Successful!")
+                return True
+            else:
+                print_with_message(f"Incorrect OTP {input_otp}. Try again.")
         else:
-            print_with_message(f"Incorrect OTP {input_otp}. Try again.")
-    else:
-        can_attempt_interactive()
-        print_with_message(f"{INCORRECT_ATTEMPTS} incorrect OTP attempts. Try the urgent key.")
-        msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
-        rsp = pamh.conversation(msg)
-        urgent_key_input = rsp.resp
-        if urgent_key_input == URGENT_KEY:
-            print_with_message(f"Urgent login successful with message {urgent_key_input}.")
-            return True
-        else:
-            print_with_message("Incorrect Urgent Key. Access Denied.")
-            return False
-    # unreachable code, for situation when code above changes
-    print_with_message("Access Denied.")
-    return False
+            can_attempt_interactive()
+            print_with_message(f"{INCORRECT_ATTEMPTS} incorrect OTP attempts. Try the urgent key.")
+            msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
+            rsp = pamh.conversation(msg)
+            urgent_key_input = rsp.resp
+            if urgent_key_input == URGENT_KEY:
+                print_with_message(f"Urgent login successful with message {urgent_key_input}.")
+                return True
+            else:
+                print_with_message("Incorrect Urgent Key. Access Denied.")
+                return False
+        # unreachable code, for situation when code above changes
+        print_with_message("Access Denied.")
+        return False
+    except Exception as e:
+        print_with_message(f"Error: {e}")
+        return False
 
 
 def log(message):

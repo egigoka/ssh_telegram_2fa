@@ -29,7 +29,7 @@ class CachedOTP:
     def save_otp(self):
         with open("/tmp/otp", "wb") as file:
             string = f"{self.otp}\n{self.previous_otp}"
-            file.write(self.otp.encode("utf-8"))
+            file.write(string.encode("utf-8"))
 
     def load_otp(self):
         try:

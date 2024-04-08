@@ -36,7 +36,10 @@ class CachedOTP:
             with open("/tmp/otp", "rb") as file:
                 otp = file.read().decode("utf-8").split("\n")
                 self.otp = otp[0]
-                self.previous_otp = otp[1]
+                try:
+                    self.previous_otp = otp[1]
+                except IndexError:
+                    self.previous_otp = None
         except FileNotFoundError:
             self.otp = None
             self.previous_otp = None

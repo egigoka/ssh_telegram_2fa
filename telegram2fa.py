@@ -157,7 +157,11 @@ def pam_sm_authenticate(pamh, flags, argv):
     if local_network in pamh.rhost:
         return pamh.PAM_SUCCESS
 
-    if check_auth(pamh):
+    result = check_auth(pamh)
+
+    log(f"{result=}")
+
+    if result:
         return pamh.PAM_SUCCESS
     return pamh.PAM_AUTH_ERR
 

@@ -145,7 +145,6 @@ def check_auth(pamh):
         message = f"Error: {e}"
         log(message)
         print_with_message(message)
-
         return False
 
 

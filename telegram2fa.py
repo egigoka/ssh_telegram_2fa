@@ -117,9 +117,9 @@ def check_auth(pamh):
             # msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
             log("before conversation")
             msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
-            log("after conversation")
+            log("after creating message")
             rsp = pamh.conversation(msg)
-            log(f"{rsp=}")
+            log(f"after conversation {rsp=}")
             input_otp = rsp.resp
             if cached_otp.check_otp(input_otp):
                 print_with_message("Login Successful!")
@@ -216,12 +216,13 @@ CONNECTION_INFO = (f"host: {os.environ.get('PAM_RHOST')}, user: {os.environ.get(
                    f", service: {os.environ.get('PAM_SERVICE')}, tty: {os.environ.get('PAM_TTY')}"
                    f", user: {os.environ.get('PAM_USER')}, type: {os.environ.get('PAM_TYPE')}")
 
-log(f"{CONNECTION_INFO=}")
-log(f"{TELEGRAM_TOKEN=}")
-log(f"{CHAT_ID=}")
-log(f"{URGENT_KEY=}")
-log(f"{INCORRECT_ATTEMPTS=}")
-log(f"{os.getcwd()=}")
+if "PAM_DEBUG" in os.environ:
+    log(f"{CONNECTION_INFO=}")
+    log(f"{TELEGRAM_TOKEN=}")
+    log(f"{CHAT_ID=}")
+    log(f"{URGENT_KEY=}")
+    log(f"{INCORRECT_ATTEMPTS=}")
+    log(f"{os.getcwd()=}")
 
 # usage:
 # # apt-get install libpam-python

@@ -144,7 +144,7 @@ CHAT_ID = os.getenv('CHAT_ID')
 URGENT_KEY = os.getenv('URGENT_KEY')
 try:
     INCORRECT_ATTEMPTS = int(os.getenv('INCORRECT_ATTEMPTS'))
-except ValueError:
+except TypeError:
     INCORRECT_ATTEMPTS = 1
 BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
 

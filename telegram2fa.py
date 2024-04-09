@@ -59,7 +59,10 @@ def get_otp():
 
 
 def print_with_message(message, pamh):
-    user, ip, service, tty, ruser, auth_type = get_connection_info(pamh)
+    if pamh is not None:
+        user, ip, service, tty, ruser, auth_type = get_connection_info(pamh)
+    else:
+        user, ip, service, tty, ruser, auth_type = None, None, None, None, None, None
     connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}\nType: {auth_type}"
     send_telegram_message(f"{message} from {connection_info}")
     print(message)

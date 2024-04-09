@@ -17,12 +17,18 @@ Naive implementation of PAM module on Python. Done in fashion that doesn't use i
 
 ## Usage
 
-### Step 1: Install PAM Python
+### Step 1: Install dependencies
 
 Install `libpam-python` to enable PAM (Pluggable Authentication Module) support for Python scripts:
 
 ```bash
 apt-get install libpam-python
+```
+
+Install `requests` and `python-dotenv` via `pip`
+
+```bash
+pip install requests python-dotenv
 ```
 
 ### Step 2: Configure SSH

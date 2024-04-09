@@ -1,5 +1,3 @@
----
-
 ## Usage
 
 ### Step 1: Install PAM Python
@@ -62,6 +60,4 @@ systemctl restart sshd
 
 ### Inspiration
 
-This setup was inspired by an article on [hacktracking.blogspot.com](http://hacktracking.blogspot.com/2015/12/ssh-two-factor-authentication-pam.html) about SSH two-factor authentication using PAM.
-
----
+This setup was inspired by a post on [hacktracking.blogspot.com](http://hacktracking.blogspot.com/2015/12/ssh-two-factor-authentication-pam.html).

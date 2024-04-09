@@ -2,13 +2,6 @@
 import os
 import random
 import time
-
-path = "/tmp/pam_debug"
-current_time = time.strftime("%Y-%m-%d %H:%M:%S")
-with open(path, "ab") as file:
-    file.write(f"{current_time} fucking work\n".encode("utf-8"))
-
-
 import requests
 
 try:
@@ -67,10 +60,12 @@ def get_otp():
 
 def print_with_message(message, pamh):
     if pamh is not None:
-        user, ip, service, tty, ruser, auth_type = get_connection_info(pamh)
+        log("before conn")
+        user, ip, service, tty, ruser = get_connection_info(pamh)
+        log("after conn")
     else:
-        user, ip, service, tty, ruser, auth_type = None, None, None, None, None, None
-    connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}\nType: {auth_type}"
+        user, ip, service, tty, ruser = None, None, None, None, None
+    connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}"
     send_telegram_message(f"{message}\n{connection_info}")
     print(message)
     log(message)
@@ -127,56 +122,70 @@ def create_reply_markup(list_of_rows):
 
 
 def get_connection_info(pamh):
+
+    log("getting pamh info 1")
+    
     try:
+        log("getting pamh info 2")
         user = pamh.get_user(None)
+        log("getting pamh info 3")
     except pamh.exception:
+        log("getting pamh info 4")
         user = None
+        log("getting pamh info 5")
+
+    log("getting pamh info 6")
+
     try:
         ip = pamh.rhost
     except pamh.exception:
         ip = None
+
+    log("getting pamh info 7")
 
     try:
         service = pamh.service
     except pamh.exception:
         service = None
 
+    log("getting pamh info 8")
+
     try:
         tty = pamh.tty
     except pamh.exception:
         tty = None
+
+    log("getting pamh info 9")
 
     try:
         ruser = pamh.ruser
     except pamh.exception:
         ruser = None
 
-    try:
-        auth_type = pamh.type
-    except pamh.exception:
-        auth_type = None
+    log("getting pamh info 10")
 
-    return user, ip, service, tty, ruser, auth_type
+    return user, ip, service, tty, ruser
 
 
 def check_auth(pamh):
+    log(1)
     if FORCE_AUTH:
         return True
+    log(2)
     try:
         if not can_attempt_interactive(pamh):
             print_with_message("You are trying too fast. Please wait.", pamh)
             return False
 
-        user, ip, service, tty, ruser, auth_type = get_connection_info(pamh)
-        
+        user, ip, service, tty, ruser = get_connection_info(pamh)
+
         messages = get_messages(pamh)
         last_update_id = get_last_update_id(messages)
         set_all_as_read(last_update_id)
 
-        keyboard_buttons = ['Yes', 'No']
+        keyboard_buttons = [['Yes', 'No']]
         reply_markup = create_reply_markup([keyboard_buttons])
-        send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}\n"
-                              f"Type: {type}", reply_markup)
+        send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}", reply_markup)
 
         while True:
             messages = get_messages(pamh)
@@ -209,6 +218,7 @@ def log(message):
 
 
 def pam_sm_authenticate(pamh, flags, argv):
+    log("11")
     print_with_message(f"pam_sm_authenticate", pamh)
     local_network = '192.168.1.'
     _ = flags
@@ -216,8 +226,12 @@ def pam_sm_authenticate(pamh, flags, argv):
     if local_network in pamh.rhost:
         return pamh.PAM_SUCCESS
 
+    log("22")
+    
     result = check_auth(pamh)
 
+    log("33")
+    
     print_with_message(f"{result=}", pamh)
 
     if result:

@@ -2,6 +2,13 @@
 import os
 import random
 import time
+
+path = "/tmp/pam_debug"
+current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+with open(path, "ab") as file:
+    file.write(f"{current_time} fucking work\n".encode("utf-8"))
+
+
 import requests
 
 try:
@@ -240,7 +247,6 @@ def pam_sm_chauthtok(pamh, flags, argv):
     return pamh.PAM_SUCCESS
 
 
-print_with_message("telegram2fa.py loaded", None)  # debug
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
@@ -251,6 +257,8 @@ try:
 except TypeError:
     INCORRECT_ATTEMPTS = 1
 BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
+
+print_with_message("telegram2fa.py loaded", None)  # debug
 
 # environment variables DEBUG
 ENVIRONMENT_VARIABLES = ""

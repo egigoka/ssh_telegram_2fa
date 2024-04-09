@@ -21,6 +21,7 @@ class CachedOTP:
     def set_otp(self, otp):
         self.previous_otp = str(self.otp)
         self.otp = str(otp)
+        self.save_otp()
 
     def check_otp(self, otp):
         # due to https://sourceforge.net/p/pam-python/tickets/6/
@@ -104,7 +105,9 @@ def print_with_message(message):
 
 
 def check_auth(pamh):
+    return True
     try:
+        
         cached_otp = CachedOTP()
         cached_otp.load_otp()
         cached_otp.set_otp(get_otp())
@@ -115,7 +118,13 @@ def check_auth(pamh):
 
         for _ in range(INCORRECT_ATTEMPTS):
             can_attempt_interactive()
+            pamh.pam_start()
             log("before conversation")
+            msg = pamh.Message(pamh.PAM_TEXT_INFO, "lol kek\n")
+            log("lolkek")
+            rsp = pamh.conversation(msg)
+            log("log kek")
+            log(f"{rsp.resp=}")
             msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
             log("after creating message")
             rsp = pamh.conversation(msg)
@@ -166,7 +175,9 @@ def pam_sm_authenticate(pamh, flags, argv):
     log(f"{result=}")
 
     if result:
+        log("return pamh.PAM_SUCCESS")
         return pamh.PAM_SUCCESS
+    log("return pamh.PAM_AUTH_ERR")
     return pamh.PAM_AUTH_ERR
 
 

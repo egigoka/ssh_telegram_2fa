@@ -272,6 +272,9 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 URGENT_KEY = os.getenv('URGENT_KEY')
 FORCE_AUTH = bool(os.getenv('FORCE_AUTH'))
+log(f"{FORCE_AUTH=}")
+FORCE_AUTH = bool(FORCE_AUTH)
+log(f"{FORCE_AUTH=}")
 try:
     INCORRECT_ATTEMPTS = int(os.getenv('INCORRECT_ATTEMPTS'))
 except TypeError:

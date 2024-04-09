@@ -60,10 +60,10 @@ def get_otp():
 
 def print_with_message(message, pamh):
     if pamh is not None:
-        user, ip, service, tty, ruser = get_connection_info(pamh)
+        user, ip, service, tty = get_connection_info(pamh)
     else:
-        user, ip, service, tty, ruser = None, None, None, None, None
-    connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}"
+        user, ip, service, tty = None, None, None, None
+    connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}"
     send_telegram_message(f"{message}\n{connection_info}")
     print(message)
     log(message)
@@ -141,12 +141,7 @@ def get_connection_info(pamh):
     except pamh.exception:
         tty = None
 
-    try:
-        ruser = pamh.ruser
-    except pamh.exception:
-        ruser = None
-
-    return user, ip, service, tty, ruser
+    return user, ip, service, tty
 
 
 def check_auth(pamh):
@@ -156,8 +151,8 @@ def check_auth(pamh):
     try:
         can_attempt_interactive(pamh)
 
-        user, ip, service, tty, ruser = get_connection_info(pamh)
-        
+        user, ip, service, tty = get_connection_info(pamh)
+
         messages = get_messages(pamh)
         log(f"{messages=}")
         last_update_id = get_last_update_id(messages)
@@ -169,7 +164,7 @@ def check_auth(pamh):
         log(f"{keyboard_buttons=}")
         reply_markup = create_reply_markup([keyboard_buttons])
         log(f"{reply_markup=}")
-        send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}", reply_markup)
+        send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}", reply_markup)
         log("send_telegram_message")
 
         while True:

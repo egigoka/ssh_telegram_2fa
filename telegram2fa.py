@@ -102,7 +102,7 @@ def filter_messages(messages):
         return None
     filtered_messages = []
     for message in messages['result']:
-        if message['message']['chat']['id'] == CHAT_ID:
+        if str(message['message']['chat']['id']) == CHAT_ID:
             filtered_messages.append(message)
     return filtered_messages
 

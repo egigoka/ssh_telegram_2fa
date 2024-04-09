@@ -150,17 +150,14 @@ def get_connection_info(pamh):
 
 
 def check_auth(pamh):
-    if FORCE_AUTH:
-        log("FORCE_AUTH {}".format(FORCE_AUTH))
+    if FORCE_AUTH_PAM:
+        log("FORCE_AUTH {}".format(FORCE_AUTH_PAM))
         return True
     try:
-        if not can_attempt_interactive(pamh):
-            print_with_message("You are trying too fast. Please wait.", pamh)
-            return False
-        log("can_attempt_interactive")
-        user, ip, service, tty, ruser = get_connection_info(pamh)
-        log(f"{user=}, {ip=}, {service=}, {tty=}, {ruser=}")
+        can_attempt_interactive(pamh)
 
+        user, ip, service, tty, ruser = get_connection_info(pamh)
+        
         messages = get_messages(pamh)
         log(f"{messages=}")
         last_update_id = get_last_update_id(messages)
@@ -271,17 +268,15 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 URGENT_KEY = os.getenv('URGENT_KEY')
-FORCE_AUTH = bool(os.getenv('FORCE_AUTH'))
-log(f"{FORCE_AUTH=}")
-FORCE_AUTH = bool(FORCE_AUTH)
-log(f"{FORCE_AUTH=}")
+FORCE_AUTH_PAM = bool(os.getenv('FORCE_AUTH_PAM'))
+log(f"{FORCE_AUTH_PAM=}")
+FORCE_AUTH_PAM = bool(FORCE_AUTH_PAM)
+log(f"{FORCE_AUTH_PAM=}")
 try:
     INCORRECT_ATTEMPTS = int(os.getenv('INCORRECT_ATTEMPTS'))
 except TypeError:
     INCORRECT_ATTEMPTS = 1
 BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
-
-print_with_message("telegram2fa.py loaded", None)  # debug
 
 
 # if "PAM_DEBUG" in os.environ:

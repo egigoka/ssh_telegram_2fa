@@ -263,10 +263,8 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 URGENT_KEY = os.getenv('URGENT_KEY')
-FORCE_AUTH_PAM = bool(os.getenv('FORCE_AUTH_PAM'))
-log(f"{FORCE_AUTH_PAM=}")
-FORCE_AUTH_PAM = bool(FORCE_AUTH_PAM)
-log(f"{FORCE_AUTH_PAM=}")
+FORCE_AUTH_PAM = os.getenv('FORCE_AUTH_PAM')
+FORCE_AUTH_PAM = FORCE_AUTH_PAM.lower() == 'true'
 try:
     INCORRECT_ATTEMPTS = int(os.getenv('INCORRECT_ATTEMPTS'))
 except TypeError:

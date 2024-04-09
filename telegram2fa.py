@@ -40,9 +40,7 @@ def send_telegram_message(message, reply_markup=None):
     }
     if reply_markup is not None:
         payload['reply_markup'] = reply_markup
-    log(f"send_telegram_message {payload=}")
     response = requests.post(url, json=payload)
-    log(f"DONE send_telegram_message {message=}, {reply_markup=}")
     if not response.ok:
         log(f"Error message: {response.text}")
     return response.ok
@@ -50,8 +48,7 @@ def send_telegram_message(message, reply_markup=None):
 
 def can_attempt_interactive(pamh):
     while not BUCKET.consume():
-        log("cannot get token for attempt, waiting")
-        print_with_message("You are trying too fast. Please wait.", pamh)
+        print_with_message("cannot get token for attempt, waiting", pamh)
         time.sleep(1)
 
 
@@ -144,7 +141,6 @@ def get_connection_info(pamh):
 
 def check_auth(pamh):
     if FORCE_AUTH_PAM:
-        log("FORCE_AUTH {}".format(FORCE_AUTH_PAM))
         return True
     try:
         can_attempt_interactive(pamh)
@@ -152,45 +148,29 @@ def check_auth(pamh):
         user, ip, service, tty = get_connection_info(pamh)
 
         messages = get_messages(pamh)
-        log(f"{messages=}")
         last_update_id = get_last_update_id(messages)
-        log(f"{last_update_id=}")
 
         keyboard_buttons = [['Yes', 'No']]
-        log(f"{keyboard_buttons=}")
         reply_markup = create_reply_markup(keyboard_buttons)
-        log(f"{reply_markup=}")
         send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nAuthorize?", reply_markup)
-        log("send_telegram_message")
 
         while True:
-            log("while True")
             messages = get_messages(pamh, last_update_id + 1 if last_update_id is not None else last_update_id)
-            log(f"{messages=}")
             last_update_id = get_last_update_id(messages, fallback=last_update_id)
-            log(f"{last_update_id=}")
             filtered_messages = filter_messages(messages)
-            log(f"{filtered_messages=}")
             if filtered_messages:
-                log("filtered_messages")
                 for message in filtered_messages[::-1]:
-                    log(f"{message=}")
                     try:
                         reply = message['callback_query']['data']
                     except KeyError:
                         reply = None
                     if reply == 'Yes':
-                        send_telegram_message("Access Granted.")
                         return True
                     elif reply == 'No':
-                        send_telegram_message("Access Denied.")
                         return False
-            else:
-                log("else")
             time.sleep(1)
 
         # unreachable code, for situation when code above changes
-        log("unreachable code")
         print_with_message("Access Denied.", pamh)
         return False
     except BaseException as e:
@@ -209,7 +189,6 @@ def log(message):
 
 
 def pam_sm_authenticate(pamh, flags, argv):
-    print_with_message(f"pam_sm_authenticate", pamh)
     local_network = '192.168.1.'
     _ = flags
     _ = argv
@@ -217,13 +196,12 @@ def pam_sm_authenticate(pamh, flags, argv):
         return pamh.PAM_SUCCESS
     
     result = check_auth(pamh)
-    
-    print_with_message(f"{result=}", pamh)
 
     if result:
-        print_with_message("return pamh.PAM_SUCCESS", pamh)
+        print_with_message("Access Granted.", pamh)
         return pamh.PAM_SUCCESS
-    print_with_message("return pamh.PAM_AUTH_ERR", pamh)
+
+    print_with_message("Access Denied.", pamh)
     return pamh.PAM_AUTH_ERR
 
 
@@ -294,6 +272,7 @@ BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
 # CHAT_ID=your_chat_id_here
 # URGENT_KEY="your_urgent_key_here"
 # INCORRECT_ATTEMPTS=3
+# FORCE_AUTH_PAM=False
 #
 # # systemctl restart sshd
 # inspiration: http://hacktracking.blogspot.com/2015/12/ssh-two-factor-authentication-pam.html

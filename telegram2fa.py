@@ -151,6 +151,7 @@ def get_connection_info(pamh):
 
 def check_auth(pamh):
     if FORCE_AUTH:
+        log("FORCE_AUTH {}".format(FORCE_AUTH))
         return True
     try:
         if not can_attempt_interactive(pamh):
@@ -239,35 +240,30 @@ def pam_sm_authenticate(pamh, flags, argv):
 def pam_sm_setcred(pamh, flags, argv):
     _ = flags
     _ = argv
-    print_with_message(f"pam_sm_setcred", pamh)
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_acct_mgmt(pamh, flags, argv):
     _ = flags
     _ = argv
-    print_with_message(f"pam_sm_acct_mgmt", pamh)
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_open_session(pamh, flags, argv):
     _ = flags
     _ = argv
-    print_with_message(f"pam_sm_open_session", pamh)
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_close_session(pamh, flags, argv):
     _ = flags
     _ = argv
-    print_with_message(f"pam_sm_close_session", pamh)
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_chauthtok(pamh, flags, argv):
     _ = flags
     _ = argv
-    print_with_message(f"pam_sm_chauthtok", pamh)
     return pamh.PAM_SUCCESS
 
 
@@ -283,13 +279,6 @@ except TypeError:
 BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
 
 print_with_message("telegram2fa.py loaded", None)  # debug
-
-# environment variables DEBUG
-ENVIRONMENT_VARIABLES = ""
-for key, value in os.environ.items():
-    ENVIRONMENT_VARIABLES += f"{key}={value}\n"
-print_with_message(f"{ENVIRONMENT_VARIABLES}", pamh=None)
-# DEBUG END
 
 
 # if "PAM_DEBUG" in os.environ:

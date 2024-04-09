@@ -32,6 +32,24 @@ class TokenBucket:
         self.last_update = now
 
 
+def request_with_retry(func, url, json=None, params=None):
+    while True:
+        response = func(url, json=json, params=params)
+
+        if not response.ok:
+            time.sleep(1)
+            log(f"Error message: {response.text}")
+            continue
+
+        try:
+            response.json()
+            return response
+        except ValueError:
+            time.sleep(1)
+            log(f"Error message: {response.text}")
+            continue
+
+
 def send_telegram_message(message, reply_markup=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
@@ -40,9 +58,9 @@ def send_telegram_message(message, reply_markup=None):
     }
     if reply_markup is not None:
         payload['reply_markup'] = reply_markup
-    response = requests.post(url, json=payload)
-    if not response.ok:
-        log(f"Error message: {response.text}")
+
+    response = request_with_retry(requests.post, url, json=payload)
+
     return response.ok
 
 
@@ -68,12 +86,8 @@ def get_messages(pamh, last_update_id=None):
     payload = {
         'offset': last_update_id
     }
-    response = requests.get(url, params=payload)
-    try:
-        return response.json()
-    except ValueError:
-        print_with_message(f"Error: {response.text}", pamh)
-        return None
+    response = request_with_retry(requests.get, url, params=payload)
+    return response.json()
 
 
 def get_last_update_id(messages, fallback=None):
@@ -238,9 +252,7 @@ def pam_sm_chauthtok(pamh, flags, argv):
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
-URGENT_KEY = os.getenv('URGENT_KEY')
-FORCE_AUTH_PAM = os.getenv('FORCE_AUTH_PAM')
-FORCE_AUTH_PAM = FORCE_AUTH_PAM.lower() == 'true'
+FORCE_AUTH_PAM = os.getenv('FORCE_AUTH_PAM').lower() == 'true'
 try:
     INCORRECT_ATTEMPTS = int(os.getenv('INCORRECT_ATTEMPTS'))
 except TypeError:

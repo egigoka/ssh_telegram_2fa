@@ -246,33 +246,3 @@ try:
 except TypeError:
     INCORRECT_ATTEMPTS = 1
 BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
-
-
-# if "PAM_DEBUG" in os.environ:
-#     print_with_message(f"{CONNECTION_INFO=}")
-#     print_with_message(f"{TELEGRAM_TOKEN=}")
-#     print_with_message(f"{CHAT_ID=}")
-#     print_with_message(f"{URGENT_KEY=}")
-#     print_with_message(f"{INCORRECT_ATTEMPTS=}")
-#     print_with_message(f"{os.getcwd()=}")
-
-# usage:
-# # apt-get install libpam-python
-#
-# # grep -m 1 ChallengeResponseAuthentication /etc/ssh/sshd_config
-# ChallengeResponseAuthentication yes
-#
-# # cat /etc/pam.d/sshd | grep -B 1 -A 1 authentication
-# auth requisite /lib/security/pam_python.so /path/to/telegram2fa.py
-# # Standard Un*x authentication.
-# @include common-auth
-#
-# cat /.env
-# TELEGRAM_TOKEN="your_token_here"
-# CHAT_ID=your_chat_id_here
-# URGENT_KEY="your_urgent_key_here"
-# INCORRECT_ATTEMPTS=3
-# FORCE_AUTH_PAM=False
-#
-# # systemctl restart sshd
-# inspiration: http://hacktracking.blogspot.com/2015/12/ssh-two-factor-authentication-pam.html

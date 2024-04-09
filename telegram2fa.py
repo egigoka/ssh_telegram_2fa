@@ -168,7 +168,7 @@ def check_auth(pamh):
             return False
 
         user, ip, service, tty, ruser, auth_type = get_connection_info(pamh)
-
+        
         messages = get_messages(pamh)
         last_update_id = get_last_update_id(messages)
         set_all_as_read(last_update_id)

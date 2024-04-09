@@ -1,3 +1,18 @@
+## Motivation
+
+Naive implementation of PAM module on Python. Done in fashion that doesn't use interactive functionality of PAM such as `conversation` and `Message` as a workaround for [this bug](https://sourceforge.net/p/pam-python/tickets/6/).
+
+## TODO
+ [ ] Add tests
+ 
+ [ ] Make subnets for which 2fa is skipped configurable
+
+ [ ] As I see now, without interactiveness, you can't bypass this in case internet connection or access to Telegram account is down
+
+ [ ] Different users may want to use different Telegram accounts to review access requests
+
+ [ ] Make proper logging instead of dumping it into /tmp (I'm sorry, I'm not a very skilled Linux developer heh)
+
 ## Usage
 
 ### Step 1: Install PAM Python
@@ -40,7 +55,7 @@ auth requisite /lib/security/pam_python.so /path/to/telegram2fa.py
 
 ### Step 4: Set Environment Variables
 
-Create a `.env` file with your Telegram bot token, chat ID, urgent key, and other configuration settings:
+Create a `.env` file with your Telegram bot token, chat ID, and other configuration settings:
 
 ```plaintext
 # /.env file content

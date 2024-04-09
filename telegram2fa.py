@@ -44,7 +44,7 @@ def send_telegram_message(message, reply_markup=None):
         'text': message,
         'reply_markup': reply_markup
     }
-    response = requests.post(url, data=payload)
+    response = requests.post(url, json=payload)
     return response.ok
 
 
@@ -181,10 +181,14 @@ def check_auth(pamh):
                 log("filtered_messages")
                 for message in filtered_messages:
                     log(f"{message=}")
-                    if message['message']['text'] == 'Yes':
+                    try:
+                        reply = message['callback_query']['data']
+                    except KeyError:
+                        reply = None
+                    if reply == 'Yes':
                         log("Yes")
                         return True
-                    elif message['message']['text'] == 'No':
+                    elif reply == 'No':
                         log("No")
                         return False
             else:

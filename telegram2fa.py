@@ -13,45 +13,6 @@ except ModuleNotFoundError:
     exit(1)
 
 
-class CachedOTP:
-    def __init__(self):
-        self.otp = None
-        self.previous_otp = None
-
-    def set_otp(self, otp):
-        self.previous_otp = str(self.otp)
-        self.otp = str(otp)
-
-    def check_otp(self, otp):
-        # due to https://sourceforge.net/p/pam-python/tickets/6/
-        send_telegram_message(f"OTP entered: {otp}, current OTP: {self.otp}, previous OTP: {self.previous_otp}")
-        return otp == self.otp or otp == self.previous_otp
-
-    def save_otp(self):
-        with open("/tmp/otp", "wb") as file:
-            string = f"{self.otp}\n{self.previous_otp}"
-            file.write(string.encode("utf-8"))
-
-    def load_otp(self):
-        try:
-            with open("/tmp/otp", "rb") as file:
-                otp = file.read().decode("utf-8").split("\n")
-                self.otp = otp[0]
-                try:
-                    self.previous_otp = otp[1]
-                except IndexError:
-                    self.previous_otp = None
-        except FileNotFoundError:
-            self.otp = None
-            self.previous_otp = None
-            self.save_otp()
-        except Exception as e:
-            print(f"Error: {e}")
-            log(f"Error: {e}")
-            self.otp = None
-            self.previous_otp = None
-
-
 class TokenBucket:
     def __init__(self, capacity, fill_rate):
         self.capacity = capacity
@@ -77,20 +38,20 @@ def can_attempt():
     return BUCKET.consume()
 
 
-def send_telegram_message(message):
+def send_telegram_message(message, reply_markup=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         'chat_id': CHAT_ID,
         'text': message,
-        'parse_mode': 'Markdown'
+        'reply_markup': reply_markup
     }
     response = requests.post(url, data=payload)
     return response.ok
 
 
-def can_attempt_interactive():
+def can_attempt_interactive(pamh):
     while not BUCKET.consume():
-        print_with_message("You are trying too fast. Please wait.")
+        print_with_message("You are trying too fast. Please wait.", pamh)
         time.sleep(1)
 
 
@@ -98,53 +59,117 @@ def get_otp():
     return str(random.randint(100000, 999999))
 
 
-def print_with_message(message):
-    send_telegram_message(f"{message} from {CONNECTION_INFO}")
+def print_with_message(message, pamh):
+    user, ip, service, tty, ruser, auth_type = get_connection_info(pamh)
+    connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}\nType: {auth_type}"
+    send_telegram_message(f"{message} from {connection_info}")
     print(message)
+    log(message)
+
+
+def get_messages(pamh):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
+    response = requests.get(url)
+    try:
+        return response.json()
+    except ValueError:
+        print_with_message(f"Error: {response.text}", pamh)
+        return None
+
+
+def set_all_as_read(last_update_id):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
+    payload = {
+        'offset': last_update_id
+    }
+    response = requests.post(url, data=payload)
+    return response.ok
+
+
+def get_last_update_id(messages):
+    if messages is None:
+        return None
+    try:
+        return messages['result'][-1]['update_id']
+    except IndexError:
+        return None
+
+
+def filter_messages(messages):
+    if messages is None:
+        return None
+    filtered_messages = []
+    for message in messages['result']:
+        if message['message']['chat']['id'] == CHAT_ID:
+            filtered_messages.append(message)
+    return filtered_messages
+
+
+def create_reply_markup(list_of_rows):
+    reply_markup = {}
+    inline_keyboard = []
+    for row in list_of_rows:
+        current_row = []
+        for button in row:
+            current_row.append({'text': button, 'callback_data': button})
+        inline_keyboard.append(current_row)
+    reply_markup['inline_keyboard'] = inline_keyboard
+    return reply_markup
+
+
+def get_connection_info(pamh):
+    try:
+        user = pamh.get_user(None)
+    except pamh.exception:
+        user = None
+    try:
+        ip = pamh.rhost
+    except pamh.exception:
+        ip = None
+
+    try:
+        service = pamh.service
+    except pamh.exception:
+        service = None
+
+    try:
+        tty = pamh.tty
+    except pamh.exception:
+        tty = None
+
+    try:
+        ruser = pamh.ruser
+    except pamh.exception:
+        ruser = None
+
+    try:
+        auth_type = pamh.type
+    except pamh.exception:
+        auth_type = None
+
+    return user, ip, service, tty, ruser, auth_type
 
 
 def check_auth(pamh):
     try:
-        cached_otp = CachedOTP()
-        cached_otp.load_otp()
-        cached_otp.set_otp(get_otp())
-        if send_telegram_message(f"Your OTP is: {cached_otp.otp}"):
-            print("OTP sent to your Telegram chat.")
-        else:
-            print("Failed to send OTP.")
+        if not can_attempt():
+            print_with_message("You are trying too fast. Please wait.", pamh)
+            return False
 
-        for _ in range(INCORRECT_ATTEMPTS):
-            can_attempt_interactive()
-            log("before conversation")
-            msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
-            log("after creating message")
-            rsp = pamh.conversation(msg)
-            log(f"after conversation {rsp.resp}")
-            input_otp = rsp.resp
-            if cached_otp.check_otp(input_otp):
-                print_with_message("Login Successful!")
-                return True
-            else:
-                print_with_message(f"Incorrect OTP {input_otp}. Try again.")
-        else:
-            can_attempt_interactive()
-            print_with_message(f"{INCORRECT_ATTEMPTS} incorrect OTP attempts. Try the urgent key.")
-            msg = pamh.Message(pamh.PAM_PROMPT_ECHO_OFF, 'Enter OTP: ')
-            rsp = pamh.conversation(msg)
-            urgent_key_input = rsp.resp
-            if urgent_key_input == URGENT_KEY:
-                print_with_message(f"Urgent login successful with message {urgent_key_input}.")
-                return True
-            else:
-                print_with_message("Incorrect Urgent Key. Access Denied.")
-                return False
-        # unreachable code, for situation when code above changes
-        print_with_message("Access Denied.")
-        return False
+        user, ip, service, tty, ruser, auth_type = get_connection_info(pamh)
+
+        messages = get_messages(pamh)
+        last_update_id = get_last_update_id(messages)
+        set_all_as_read(last_update_id)
+
+        keyboard_buttons = ['Yes', 'No']
+        reply_markup = create_reply_markup([keyboard_buttons])
+        send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}\n"
+                              f"Type: {type}", reply_markup)
+
     except BaseException as e:
         message = f"Error: {e}"
-        log(message)
-        print_with_message(message)
+        print_with_message(message, pamh)
         return False
 
 
@@ -156,14 +181,16 @@ def log(message):
 
 
 def pam_sm_authenticate(pamh, flags, argv):
-    log(f"pam_sm_authenticate")
+    print_with_message(f"pam_sm_authenticate", pamh)
     local_network = '192.168.1.'
+    _ = flags
+    _ = argv
     if local_network in pamh.rhost:
         return pamh.PAM_SUCCESS
 
     result = check_auth(pamh)
 
-    log(f"{result=}")
+    print_with_message(f"{result=}", pamh)
 
     if result:
         return pamh.PAM_SUCCESS
@@ -171,31 +198,41 @@ def pam_sm_authenticate(pamh, flags, argv):
 
 
 def pam_sm_setcred(pamh, flags, argv):
-    log(f"pam_sm_setcred")
+    _ = flags
+    _ = argv
+    print_with_message(f"pam_sm_setcred", pamh)
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_acct_mgmt(pamh, flags, argv):
-    log(f"pam_sm_acct_mgmt")
+    _ = flags
+    _ = argv
+    print_with_message(f"pam_sm_acct_mgmt", pamh)
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_open_session(pamh, flags, argv):
-    log(f"pam_sm_open_session")
+    _ = flags
+    _ = argv
+    print_with_message(f"pam_sm_open_session", pamh)
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_close_session(pamh, flags, argv):
-    log(f"pam_sm_close_session")
+    _ = flags
+    _ = argv
+    print_with_message(f"pam_sm_close_session", pamh)
     return pamh.PAM_SUCCESS
 
 
 def pam_sm_chauthtok(pamh, flags, argv):
-    log(f"pam_sm_chauthtok")
+    _ = flags
+    _ = argv
+    print_with_message(f"pam_sm_chauthtok", pamh)
     return pamh.PAM_SUCCESS
 
 
-log("telegram2fa.py loaded")
+print_with_message("telegram2fa.py loaded", None)  # debug
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
@@ -210,20 +247,17 @@ BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
 ENVIRONMENT_VARIABLES = ""
 for key, value in os.environ.items():
     ENVIRONMENT_VARIABLES += f"{key}={value}\n"
-log(f"{ENVIRONMENT_VARIABLES}")
+print_with_message(f"{ENVIRONMENT_VARIABLES}", pamh=None)
 # DEBUG END
 
-CONNECTION_INFO = (f"host: {os.environ.get('PAM_RHOST')}, user: {os.environ.get('PAM_RUSER')}"
-                   f", service: {os.environ.get('PAM_SERVICE')}, tty: {os.environ.get('PAM_TTY')}"
-                   f", user: {os.environ.get('PAM_USER')}, type: {os.environ.get('PAM_TYPE')}")
 
 # if "PAM_DEBUG" in os.environ:
-#     log(f"{CONNECTION_INFO=}")
-#     log(f"{TELEGRAM_TOKEN=}")
-#     log(f"{CHAT_ID=}")
-#     log(f"{URGENT_KEY=}")
-#     log(f"{INCORRECT_ATTEMPTS=}")
-#     log(f"{os.getcwd()=}")
+#     print_with_message(f"{CONNECTION_INFO=}")
+#     print_with_message(f"{TELEGRAM_TOKEN=}")
+#     print_with_message(f"{CHAT_ID=}")
+#     print_with_message(f"{URGENT_KEY=}")
+#     print_with_message(f"{INCORRECT_ATTEMPTS=}")
+#     print_with_message(f"{os.getcwd()=}")
 
 # usage:
 # # apt-get install libpam-python

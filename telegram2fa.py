@@ -45,6 +45,8 @@ def send_telegram_message(message, reply_markup=None):
         'reply_markup': reply_markup
     }
     response = requests.post(url, json=payload)
+    if not response.ok:
+        print_with_message(f"Error message: {response.text}", None)
     return response.ok
 
 
@@ -52,10 +54,6 @@ def can_attempt_interactive(pamh):
     while not BUCKET.consume():
         print_with_message("You are trying too fast. Please wait.", pamh)
         time.sleep(1)
-
-
-def get_otp():
-    return str(random.randint(100000, 999999))
 
 
 def print_with_message(message, pamh):

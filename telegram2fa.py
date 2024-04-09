@@ -64,7 +64,7 @@ def print_with_message(message, pamh):
     else:
         user, ip, service, tty, ruser, auth_type = None, None, None, None, None, None
     connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}\nType: {auth_type}"
-    send_telegram_message(f"{message} from {connection_info}")
+    send_telegram_message(f"{message}\n{connection_info}")
     print(message)
     log(message)
 
@@ -240,7 +240,6 @@ def pam_sm_chauthtok(pamh, flags, argv):
     return pamh.PAM_SUCCESS
 
 
-print_with_message("telegram2fa.py loaded", None)  # debug
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
@@ -251,6 +250,8 @@ try:
 except TypeError:
     INCORRECT_ATTEMPTS = 1
 BUCKET = TokenBucket(3, 1)  # 3 tokens, refilling at 1 token per second
+
+print_with_message("telegram2fa.py loaded", None)  # debug
 
 # environment variables DEBUG
 ENVIRONMENT_VARIABLES = ""

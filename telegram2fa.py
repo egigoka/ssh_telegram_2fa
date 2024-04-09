@@ -1,5 +1,4 @@
 #!/bin/python3
-
 import os
 import random
 import time
@@ -151,6 +150,8 @@ def get_connection_info(pamh):
 
 
 def check_auth(pamh):
+    if FORCE_AUTH:
+        return True
     try:
         if not can_attempt():
             print_with_message("You are trying too fast. Please wait.", pamh)
@@ -166,7 +167,9 @@ def check_auth(pamh):
         reply_markup = create_reply_markup([keyboard_buttons])
         send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}\n"
                               f"Type: {type}", reply_markup)
-
+        # unreachable code, for situation when code above changes
+        print_with_message("Access Denied.", pamh)
+        return False
     except BaseException as e:
         message = f"Error: {e}"
         print_with_message(message, pamh)
@@ -193,7 +196,9 @@ def pam_sm_authenticate(pamh, flags, argv):
     print_with_message(f"{result=}", pamh)
 
     if result:
+        print_with_message("return pamh.PAM_SUCCESS", pamh)
         return pamh.PAM_SUCCESS
+    print_with_message("return pamh.PAM_AUTH_ERR", pamh)
     return pamh.PAM_AUTH_ERR
 
 
@@ -237,6 +242,7 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 URGENT_KEY = os.getenv('URGENT_KEY')
+FORCE_AUTH = bool(os.getenv('FORCE_AUTH'))
 try:
     INCORRECT_ATTEMPTS = int(os.getenv('INCORRECT_ATTEMPTS'))
 except TypeError:

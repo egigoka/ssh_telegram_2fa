@@ -1,6 +1,5 @@
 #!/bin/python3
 import os
-import random
 import time
 import requests
 
@@ -33,25 +32,25 @@ class TokenBucket:
         self.last_update = now
 
 
-def can_attempt():
-    return BUCKET.consume()
-
-
 def send_telegram_message(message, reply_markup=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         'chat_id': CHAT_ID,
-        'text': message,
-        'reply_markup': reply_markup
+        'text': message
     }
+    if reply_markup is not None:
+        payload['reply_markup'] = reply_markup
+    log(f"send_telegram_message {payload=}")
     response = requests.post(url, json=payload)
+    log(f"DONE send_telegram_message {message=}, {reply_markup=}")
     if not response.ok:
-        print_with_message(f"Error message: {response.text}", None)
+        log(f"Error message: {response.text}")
     return response.ok
 
 
 def can_attempt_interactive(pamh):
     while not BUCKET.consume():
+        log("cannot get token for attempt, waiting")
         print_with_message("You are trying too fast. Please wait.", pamh)
         time.sleep(1)
 
@@ -67,9 +66,12 @@ def print_with_message(message, pamh):
     log(message)
 
 
-def get_messages(pamh):
+def get_messages(pamh, last_update_id=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
-    response = requests.get(url)
+    payload = {
+        'offset': last_update_id
+    }
+    response = requests.get(url, params=payload)
     try:
         return response.json()
     except ValueError:
@@ -77,22 +79,13 @@ def get_messages(pamh):
         return None
 
 
-def set_all_as_read(last_update_id):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
-    payload = {
-        'offset': last_update_id
-    }
-    response = requests.post(url, data=payload)
-    return response.ok
-
-
-def get_last_update_id(messages):
+def get_last_update_id(messages, fallback=None):
     if messages is None:
-        return None
+        return fallback
     try:
         return messages['result'][-1]['update_id']
     except IndexError:
-        return None
+        return fallback
 
 
 def filter_messages(messages):
@@ -122,7 +115,10 @@ def create_reply_markup(list_of_rows):
 
 
 def get_connection_info(pamh):
-    
+
+    if pamh is None:
+        return None, None, None, None
+
     try:
         user = pamh.get_user(None)
     except pamh.exception:
@@ -159,44 +155,38 @@ def check_auth(pamh):
         log(f"{messages=}")
         last_update_id = get_last_update_id(messages)
         log(f"{last_update_id=}")
-        set_all_as_read(last_update_id)
-        log("set_all_as_read")
 
         keyboard_buttons = [['Yes', 'No']]
         log(f"{keyboard_buttons=}")
-        reply_markup = create_reply_markup([keyboard_buttons])
+        reply_markup = create_reply_markup(keyboard_buttons)
         log(f"{reply_markup=}")
-        send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}", reply_markup)
+        send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nAuthorize?", reply_markup)
         log("send_telegram_message")
 
         while True:
             log("while True")
-            messages = get_messages(pamh)
+            messages = get_messages(pamh, last_update_id + 1 if last_update_id is not None else last_update_id)
             log(f"{messages=}")
-            last_update_id = get_last_update_id(messages)
+            last_update_id = get_last_update_id(messages, fallback=last_update_id)
             log(f"{last_update_id=}")
-            set_all_as_read(last_update_id)
-            log("set_all_as_read")
             filtered_messages = filter_messages(messages)
             log(f"{filtered_messages=}")
             if filtered_messages:
                 log("filtered_messages")
-                for message in filtered_messages:
+                for message in filtered_messages[::-1]:
                     log(f"{message=}")
                     try:
                         reply = message['callback_query']['data']
                     except KeyError:
                         reply = None
                     if reply == 'Yes':
-                        log("Yes")
+                        send_telegram_message("Access Granted.")
                         return True
                     elif reply == 'No':
-                        log("No")
+                        send_telegram_message("Access Denied.")
                         return False
             else:
                 log("else")
-            send_telegram_message("Please reply with 'Yes' or 'No'.", reply_markup)
-            log("send_telegram_message")
             time.sleep(1)
 
         # unreachable code, for situation when code above changes
@@ -213,7 +203,9 @@ def log(message):
     path = "/tmp/pam_debug"
     current_time = time.strftime("%Y-%m-%d %H:%M:%S")
     with open(path, "ab") as file:
-        file.write(f"{current_time} {message}\n".encode("utf-8"))
+        message = f"{current_time} {message}\n"
+        print(message, end="", flush=True)
+        file.write(message.encode("utf-8"))
 
 
 def pam_sm_authenticate(pamh, flags, argv):

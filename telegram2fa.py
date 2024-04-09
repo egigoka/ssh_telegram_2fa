@@ -100,7 +100,11 @@ def filter_messages(messages):
         return None
     filtered_messages = []
     for message in messages['result']:
-        if str(message['message']['chat']['id']) == CHAT_ID:
+        try:
+            chat_id = message['message']['chat']['id']
+        except KeyError:
+            chat_id = message['callback_query']['message']['chat']['id']
+        if str(chat_id) == CHAT_ID:
             filtered_messages.append(message)
     return filtered_messages
 

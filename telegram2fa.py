@@ -71,7 +71,7 @@ def print_with_message(message, pamh):
     else:
         user, ip, service, tty, ruser, auth_type = None, None, None, None, None, None
     connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}\nType: {auth_type}"
-    send_telegram_message(f"{message} from {connection_info}")
+    send_telegram_message(f"{message}\n{connection_info}")
     print(message)
     log(message)
 
@@ -163,7 +163,7 @@ def check_auth(pamh):
     if FORCE_AUTH:
         return True
     try:
-        if not can_attempt():
+        if not can_attempt_interactive(pamh):
             print_with_message("You are trying too fast. Please wait.", pamh)
             return False
 
@@ -177,6 +177,21 @@ def check_auth(pamh):
         reply_markup = create_reply_markup([keyboard_buttons])
         send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}\n"
                               f"Type: {type}", reply_markup)
+
+        while True:
+            messages = get_messages(pamh)
+            last_update_id = get_last_update_id(messages)
+            set_all_as_read(last_update_id)
+            filtered_messages = filter_messages(messages)
+            if filtered_messages:
+                for message in filtered_messages:
+                    if message['message']['text'] == 'Yes':
+                        return True
+                    elif message['message']['text'] == 'No':
+                        return False
+            send_telegram_message("Please reply with 'Yes' or 'No'.", reply_markup)
+            time.sleep(1)
+
         # unreachable code, for situation when code above changes
         print_with_message("Access Denied.", pamh)
         return False

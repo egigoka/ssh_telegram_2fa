@@ -60,9 +60,7 @@ def get_otp():
 
 def print_with_message(message, pamh):
     if pamh is not None:
-        log("before conn")
         user, ip, service, tty, ruser = get_connection_info(pamh)
-        log("after conn")
     else:
         user, ip, service, tty, ruser = None, None, None, None, None
     connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}"
@@ -122,86 +120,88 @@ def create_reply_markup(list_of_rows):
 
 
 def get_connection_info(pamh):
-
-    log("getting pamh info 1")
     
     try:
-        log("getting pamh info 2")
         user = pamh.get_user(None)
-        log("getting pamh info 3")
     except pamh.exception:
-        log("getting pamh info 4")
         user = None
-        log("getting pamh info 5")
-
-    log("getting pamh info 6")
 
     try:
         ip = pamh.rhost
     except pamh.exception:
         ip = None
 
-    log("getting pamh info 7")
-
     try:
         service = pamh.service
     except pamh.exception:
         service = None
-
-    log("getting pamh info 8")
 
     try:
         tty = pamh.tty
     except pamh.exception:
         tty = None
 
-    log("getting pamh info 9")
-
     try:
         ruser = pamh.ruser
     except pamh.exception:
         ruser = None
 
-    log("getting pamh info 10")
-
     return user, ip, service, tty, ruser
 
 
 def check_auth(pamh):
-    log(1)
     if FORCE_AUTH:
         return True
-    log(2)
     try:
         if not can_attempt_interactive(pamh):
             print_with_message("You are trying too fast. Please wait.", pamh)
             return False
-
+        log("can_attempt_interactive")
         user, ip, service, tty, ruser = get_connection_info(pamh)
+        log(f"{user=}, {ip=}, {service=}, {tty=}, {ruser=}")
 
         messages = get_messages(pamh)
+        log(f"{messages=}")
         last_update_id = get_last_update_id(messages)
+        log(f"{last_update_id=}")
         set_all_as_read(last_update_id)
+        log("set_all_as_read")
 
         keyboard_buttons = [['Yes', 'No']]
+        log(f"{keyboard_buttons=}")
         reply_markup = create_reply_markup([keyboard_buttons])
+        log(f"{reply_markup=}")
         send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nRuser: {ruser}", reply_markup)
+        log("send_telegram_message")
 
         while True:
+            log("while True")
             messages = get_messages(pamh)
+            log(f"{messages=}")
             last_update_id = get_last_update_id(messages)
+            log(f"{last_update_id=}")
             set_all_as_read(last_update_id)
+            log("set_all_as_read")
             filtered_messages = filter_messages(messages)
+            log(f"{filtered_messages=}")
             if filtered_messages:
+                log("filtered_messages")
                 for message in filtered_messages:
+                    log(f"{message=}")
                     if message['message']['text'] == 'Yes':
+                        log("Yes")
                         return True
                     elif message['message']['text'] == 'No':
+                        log("No")
                         return False
+            else:
+                log("else")
             send_telegram_message("Please reply with 'Yes' or 'No'.", reply_markup)
+            log("send_telegram_message")
             time.sleep(1)
 
         # unreachable code, for situation when code above changes
+        log("unreachable code")
         print_with_message("Access Denied.", pamh)
         return False
     except BaseException as e:
@@ -218,19 +218,14 @@ def log(message):
 
 
 def pam_sm_authenticate(pamh, flags, argv):
-    log("11")
     print_with_message(f"pam_sm_authenticate", pamh)
     local_network = '192.168.1.'
     _ = flags
     _ = argv
     if local_network in pamh.rhost:
         return pamh.PAM_SUCCESS
-
-    log("22")
     
     result = check_auth(pamh)
-
-    log("33")
     
     print_with_message(f"{result=}", pamh)
 

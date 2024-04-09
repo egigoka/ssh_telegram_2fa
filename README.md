@@ -13,6 +13,8 @@ Naive implementation of PAM module on Python. Done in fashion that doesn't use i
 
  [ ] Make proper logging instead of dumping it into /tmp (I'm sorry, I'm not a very skilled Linux developer heh)
 
+ [ ] Maybe, storing config in root (it was default working directory for PAM) isn't my brightest idea
+
 ## Usage
 
 ### Step 1: Install PAM Python

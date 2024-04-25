@@ -1,13 +1,34 @@
----
+## Motivation
+
+Naive implementation of PAM module on Python. Done in fashion that doesn't use interactive functionality of PAM such as `conversation` and `Message` as a workaround for [this bug](https://sourceforge.net/p/pam-python/tickets/6/).
+
+## TODO
+ [ ] Add tests
+ 
+ [ ] Make subnets for which 2fa is skipped configurable
+
+ [ ] As I see now, without interactiveness, you can't bypass this in case internet connection or access to Telegram account is down
+
+ [ ] Different users may want to use different Telegram accounts to review access requests
+
+ [ ] Make proper logging instead of dumping it into /tmp (I'm sorry, I'm not a very skilled Linux developer heh)
+
+ [ ] Maybe, storing config in root (it was default working directory for PAM) isn't my brightest idea
 
 ## Usage
 
-### Step 1: Install PAM Python
+### Step 1: Install dependencies
 
 Install `libpam-python` to enable PAM (Pluggable Authentication Module) support for Python scripts:
 
 ```bash
 apt-get install libpam-python
+```
+
+Install `requests` and `python-dotenv` via `pip`
+
+```bash
+pip install requests python-dotenv
 ```
 
 ### Step 2: Configure SSH
@@ -42,7 +63,7 @@ auth requisite /lib/security/pam_python.so /path/to/telegram2fa.py
 
 ### Step 4: Set Environment Variables
 
-Create a `.env` file with your Telegram bot token, chat ID, urgent key, and other configuration settings:
+Create a `.env` file with your Telegram bot token, chat ID, and other configuration settings:
 
 ```plaintext
 # /.env file content
@@ -62,6 +83,4 @@ systemctl restart sshd
 
 ### Inspiration
 
-This setup was inspired by an article on [hacktracking.blogspot.com](http://hacktracking.blogspot.com/2015/12/ssh-two-factor-authentication-pam.html) about SSH two-factor authentication using PAM.
-
----
+This setup was inspired by a post on [hacktracking.blogspot.com](http://hacktracking.blogspot.com/2015/12/ssh-two-factor-authentication-pam.html).

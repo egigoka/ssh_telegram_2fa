@@ -61,7 +61,18 @@ def send_telegram_message(message, reply_markup=None):
 
     response = request_with_retry(requests.post, url, json=payload)
 
-    return response.ok
+    return response
+
+
+def update_telegram_message(message_id, new_message):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/editMessageText"
+    payload = {
+        "chat_id": CHAT_ID,
+        "message_id": message_id,
+        "text": new_message
+    }
+
+    response = request_with_retry(requests.post, url, json=payload)
 
 
 def can_attempt_interactive(pamh):
@@ -70,15 +81,21 @@ def can_attempt_interactive(pamh):
         time.sleep(1)
 
 
-def print_with_message(message, pamh):
+def format_message(message, pamh):
     if pamh is not None:
         user, ip, service, tty = get_connection_info(pamh)
     else:
         user, ip, service, tty = None, None, None, None
     connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}"
-    send_telegram_message(f"{message}\n{connection_info}")
-    print(message)
-    log(message)
+
+    return f"{message}\n{connection_info}"
+
+
+def print_with_message(message, pamh):
+    formatted_message = format_message(message, pamh)
+    send_telegram_message(formatted_message)
+    print(formatted_message)
+    log(formatted_message)
 
 
 def get_messages(pamh, last_update_id=None):
@@ -99,7 +116,7 @@ def get_last_update_id(messages, fallback=None):
         return fallback
 
 
-def filter_messages(messages):
+def filter_messages(messages, message_id_to_callback):
     if messages is None:
         return None
     filtered_messages = []
@@ -108,7 +125,11 @@ def filter_messages(messages):
             chat_id = message['message']['chat']['id']
         except KeyError:
             chat_id = message['callback_query']['message']['chat']['id']
-        if str(chat_id) == CHAT_ID:
+        try:
+            message_id = message["message"]["message_id"]
+        except KeyError:
+            message_id = message["callback_query"]["message"]["message_id"]
+        if str(chat_id) == CHAT_ID and message_id == message_id_to_callback:
             filtered_messages.append(message)
     return filtered_messages
 
@@ -153,9 +174,17 @@ def get_connection_info(pamh):
     return user, ip, service, tty
 
 
+def get_filtered_messages(pamh, last_update_id, message_id_to_callback):
+    messages = get_messages(pamh, last_update_id + 1 if last_update_id is not None else last_update_id)
+    last_update_id = get_last_update_id(messages, fallback=last_update_id)
+    filtered_messages = filter_messages(messages, message_id_to_callback)
+    return last_update_id, filtered_messages
+
+
 def check_auth(pamh):
+    message_id = None
     if FORCE_AUTH_PAM:
-        return True
+        return True, message_id
     try:
         can_attempt_interactive(pamh)
 
@@ -166,12 +195,12 @@ def check_auth(pamh):
 
         keyboard_buttons = [['Yes', 'No']]
         reply_markup = create_reply_markup(keyboard_buttons)
-        send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nAuthorize?", reply_markup)
-
+        sent_message = send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nAuthorize?", reply_markup)
+        message_id = sent_message.json()["result"]["message_id"]
+                
         while True:
-            messages = get_messages(pamh, last_update_id + 1 if last_update_id is not None else last_update_id)
-            last_update_id = get_last_update_id(messages, fallback=last_update_id)
-            filtered_messages = filter_messages(messages)
+            last_update_id, filtered_messages = get_filtered_messages(pamh, last_update_id, message_id)
+            
             if filtered_messages:
                 for message in filtered_messages[::-1]:
                     try:
@@ -179,18 +208,18 @@ def check_auth(pamh):
                     except KeyError:
                         reply = None
                     if reply == 'Yes':
-                        return True
+                        return True, message_id
                     elif reply == 'No':
-                        return False
+                        return False, message_id
             time.sleep(1)
 
         # unreachable code, for situation when code above changes
         print_with_message("Access Denied.", pamh)
-        return False
+        return False, message_id
     except BaseException as e:
         message = f"Error: {e}"
         print_with_message(message, pamh)
-        return False
+        return False, message_id
 
 
 def log(message):
@@ -209,13 +238,19 @@ def pam_sm_authenticate(pamh, flags, argv):
     if local_network in pamh.rhost:
         return pamh.PAM_SUCCESS
     
-    result = check_auth(pamh)
+    result, message_id = check_auth(pamh)
 
     if result:
-        print_with_message("Access Granted.", pamh)
+        formatted_message = format_message("Access Granted.", pamh)
+        print(formatted_message)
+        log(formatted_message)
+        update_telegram_message(message_id, formatted_message)
         return pamh.PAM_SUCCESS
 
-    print_with_message("Access Denied.", pamh)
+    formatted_message = format_message("Access Denied.", pamh)
+    print(formatted_message)
+    log(formatted_message)
+    update_telegram_message(message_id, formatted_message)
     return pamh.PAM_AUTH_ERR
 
 

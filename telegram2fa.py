@@ -2,6 +2,8 @@
 import os
 import time
 import requests
+import socket
+import netifaces
 
 try:
     from dotenv import load_dotenv
@@ -74,6 +76,8 @@ def update_telegram_message(message_id, new_message):
 
     response = request_with_retry(requests.post, url, json=payload)
 
+    return response
+
 
 def can_attempt_interactive(pamh):
     while not BUCKET.consume():
@@ -86,9 +90,15 @@ def format_message(message, pamh):
         user, ip, service, tty = get_connection_info(pamh)
     else:
         user, ip, service, tty = None, None, None, None
-    connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}"
 
-    return f"{message}\n{connection_info}"
+    server_hostname, server_ips = get_network_info()
+
+    connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}"
+    server_info = f"Hostname: {server_hostname}\nIP(s): {', '.join(server_ips)}"
+
+    message = "" if not message else message + "\n\n"
+
+    return f"{message}{connection_info}\n{server_info}"
 
 
 def print_with_message(message, pamh):
@@ -98,7 +108,7 @@ def print_with_message(message, pamh):
     log(formatted_message)
 
 
-def get_messages(pamh, last_update_id=None):
+def get_messages(last_update_id=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
     payload = {
         'offset': last_update_id
@@ -147,7 +157,6 @@ def create_reply_markup(list_of_rows):
 
 
 def get_connection_info(pamh):
-
     if pamh is None:
         return None, None, None, None
 
@@ -174,8 +183,25 @@ def get_connection_info(pamh):
     return user, ip, service, tty
 
 
-def get_filtered_messages(pamh, last_update_id, message_id_to_callback):
-    messages = get_messages(pamh, last_update_id + 1 if last_update_id is not None else last_update_id)
+def get_network_info():
+    host_name = socket.gethostname()
+    ip_addresses = []
+
+    # Iterate over all interfaces and get the IP addresses (skip loopback).
+    for interface in netifaces.interfaces():
+        addresses = netifaces.ifaddresses(interface)
+        ipv4_info = addresses.get(netifaces.AF_INET)
+        if ipv4_info:
+            for address in ipv4_info:
+                ip_addr = address['addr']
+                if ip_addr != "127.0.0.1":
+                    ip_addresses.append(ip_addr)
+
+    return host_name, ip_addresses
+
+
+def get_filtered_messages(last_update_id, message_id_to_callback):
+    messages = get_messages(last_update_id + 1 if last_update_id is not None else last_update_id)
     last_update_id = get_last_update_id(messages, fallback=last_update_id)
     filtered_messages = filter_messages(messages, message_id_to_callback)
     return last_update_id, filtered_messages
@@ -188,19 +214,21 @@ def check_auth(pamh):
     try:
         can_attempt_interactive(pamh)
 
-        user, ip, service, tty = get_connection_info(pamh)
-
         messages = get_messages(pamh)
         last_update_id = get_last_update_id(messages)
 
         keyboard_buttons = [['Yes', 'No']]
         reply_markup = create_reply_markup(keyboard_buttons)
-        sent_message = send_telegram_message(f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}\nAuthorize?", reply_markup)
+        formatted_message = format_message(None, pamh)
+
+        sent_message = send_telegram_message(f"{formatted_message}"
+                                             f"\n\nAuthorize?",
+                                             reply_markup)
         message_id = sent_message.json()["result"]["message_id"]
-                
+
         while True:
-            last_update_id, filtered_messages = get_filtered_messages(pamh, last_update_id, message_id)
-            
+            last_update_id, filtered_messages = get_filtered_messages(last_update_id, message_id)
+
             if filtered_messages:
                 for message in filtered_messages[::-1]:
                     try:
@@ -237,7 +265,7 @@ def pam_sm_authenticate(pamh, flags, argv):
     _ = argv
     if local_network in pamh.rhost:
         return pamh.PAM_SUCCESS
-    
+
     result, message_id = check_auth(pamh)
 
     if result:
@@ -287,7 +315,10 @@ def pam_sm_chauthtok(pamh, flags, argv):
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
-FORCE_AUTH_PAM = os.getenv('FORCE_AUTH_PAM').lower() == 'true'
+try:
+    FORCE_AUTH_PAM = os.getenv('FORCE_AUTH_PAM').lower() == 'true'
+except AttributeError:
+    FORCE_AUTH_PAM = False
 try:
     INCORRECT_ATTEMPTS = int(os.getenv('INCORRECT_ATTEMPTS'))
 except TypeError:

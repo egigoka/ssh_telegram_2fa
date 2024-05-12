@@ -81,20 +81,20 @@ def update_telegram_message(message_id, new_message):
 
 def can_attempt_interactive(pamh):
     while not BUCKET.consume():
-        print_with_message("cannot get token for attempt, waiting", pamh)
+        print_with_message("cannot get token for attempt, waiting", pamh=pamh)
         time.sleep(1)
 
 
 def format_message(message, pamh):
     if pamh is not None:
-        user, ip, service, tty = get_connection_info(pamh)
+        user, ip, service, tty = get_connection_info(pamh=pamh)
     else:
         user, ip, service, tty = None, None, None, None
 
     server_hostname, server_ips = get_network_info()
 
     connection_info = f"User: {user}\nIP: {ip}\nService: {service}\nTTY: {tty}"
-    server_info = f"Hostname: {server_hostname}\nIP(s): {', '.join(server_ips)}"
+    server_info = f"Hostname: {server_hostname}\nIPs: {', '.join(server_ips)}"
 
     message = "" if not message else message + "\n\n"
 
@@ -102,7 +102,7 @@ def format_message(message, pamh):
 
 
 def print_with_message(message, pamh):
-    formatted_message = format_message(message, pamh)
+    formatted_message = format_message(message, pamh=pamh)
     send_telegram_message(formatted_message)
     print(formatted_message)
     log(formatted_message)
@@ -212,14 +212,14 @@ def check_auth(pamh):
     if FORCE_AUTH_PAM:
         return True, message_id
     try:
-        can_attempt_interactive(pamh)
+        can_attempt_interactive(pamh=pamh)
 
-        messages = get_messages(pamh)
+        messages = get_messages()
         last_update_id = get_last_update_id(messages)
 
         keyboard_buttons = [['Yes', 'No']]
         reply_markup = create_reply_markup(keyboard_buttons)
-        formatted_message = format_message(None, pamh)
+        formatted_message = format_message(None, pamh=pamh)
 
         sent_message = send_telegram_message(f"{formatted_message}"
                                              f"\n\nAuthorize?",
@@ -242,11 +242,11 @@ def check_auth(pamh):
             time.sleep(1)
 
         # unreachable code, for situation when code above changes
-        print_with_message("Access Denied.", pamh)
+        print_with_message("Access Denied.", pamh=pamh)
         return False, message_id
     except BaseException as e:
         message = f"Error: {e}"
-        print_with_message(message, pamh)
+        print_with_message(message, pamh=pamh)
         return False, message_id
 
 
@@ -266,16 +266,16 @@ def pam_sm_authenticate(pamh, flags, argv):
     if local_network in pamh.rhost:
         return pamh.PAM_SUCCESS
 
-    result, message_id = check_auth(pamh)
+    result, message_id = check_auth(pamh=pamh)
 
     if result:
-        formatted_message = format_message("Access Granted.", pamh)
+        formatted_message = format_message("Access Granted.", pamh=pamh)
         print(formatted_message)
         log(formatted_message)
         update_telegram_message(message_id, formatted_message)
         return pamh.PAM_SUCCESS
 
-    formatted_message = format_message("Access Denied.", pamh)
+    formatted_message = format_message("Access Denied.", pamh=pamh)
     print(formatted_message)
     log(formatted_message)
     update_telegram_message(message_id, formatted_message)

@@ -25,10 +25,17 @@ Install `libpam-python` to enable PAM (Pluggable Authentication Module) support 
 apt-get install libpam-python
 ```
 
-Install `requests` and `python-dotenv` via `pip`
+There is only community package of python3 variant of pam_python for openSUSE, so use at your own risk.
+```bash
+zypper addrepo https://download.opensuse.org/repositories/home:badshah400:howdy/openSUSE_Tumbleweed/home:badshah400:howdy.repo
+zypper refresh
+zypper install pam-python3
+```
+
+Install `requests` and `python-dotenv` via `pip` as root.
 
 ```bash
-pip install requests python-dotenv
+pip install requests python-dotenv netifaces
 ```
 
 ### Step 2: Configure SSH
@@ -39,7 +46,9 @@ Ensure that `ChallengeResponseAuthentication` is set to `yes` in your SSH config
 grep -m 1 ChallengeResponseAuthentication /etc/ssh/sshd_config
 ```
 
-You should see:
+on some distributions file can be in `/usr/etc/ssh/sshd_config`
+
+You should see or add this:
 
 ```
 ChallengeResponseAuthentication yes
@@ -48,6 +57,8 @@ ChallengeResponseAuthentication yes
 ### Step 3: Configure PAM for SSHD
 
 Edit `/etc/pam.d/sshd` to include the custom PAM module for Telegram 2FA. Make sure the path to `telegram2fa.py` is correct:
+
+On some distributions it can be in `/usr/lib/pam.d/sshd`
 
 ```bash
 cat /etc/pam.d/sshd | grep -B 1 -A 1 authentication
@@ -60,6 +71,8 @@ auth requisite /lib/security/pam_python.so /path/to/telegram2fa.py
 # Standard Un*x authentication.
 @include common-auth
 ```
+
+On openSUSE community package lib is in `/usr/lib64/security/pam_python3.so`
 
 ### Step 4: Set Environment Variables
 

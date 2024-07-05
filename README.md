@@ -32,7 +32,7 @@ zypper refresh
 zypper install pam-python3
 ```
 
-Install `requests` and `python-dotenv` via `pip` as root.
+Install `requests`, `python-dotenv` and `netifaces` via `pip` as root.
 
 ```bash
 pip install requests python-dotenv netifaces
@@ -93,6 +93,10 @@ Apply the changes by restarting the SSH daemon:
 ```bash
 systemctl restart sshd
 ```
+
+### Debug
+To read auth logs, run `journalctl SYSLOG_FACILITY=10`
+To read scripts logs, run `cat /tmp/pam_debug`
 
 ### Inspiration
 

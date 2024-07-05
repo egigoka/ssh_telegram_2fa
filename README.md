@@ -74,7 +74,7 @@ auth requisite /path/to/pam_python.so /path/to/telegram2fa.py
 
 On openSUSE community package lib is in `/usr/lib64/security/pam_python3.so`
 
-to find path to pam_python.so, run "find / -name `pam_python.so" 2>/dev/null`
+to find path to pam_python.so, run `find / -name "pam_python.so" 2>/dev/null`
 
 ### Step 4: Set Environment Variables
 
